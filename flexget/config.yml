@@ -1,0 +1,97 @@
+templates:
+  tv:
+    exists_series:
+      - '/media/TOSHIBA/HTPC/Serie TV/{{series_name}}'
+    series:
+# INSERIRE SIA QUA CHE SOTTO CHE SUL FEED DI SHOWRSS
+      hdtv <720p:
+        - Silicon Valley
+        - Game of Thrones
+        - The Big Bang Theory
+        - The Royals
+    transmission:
+      host: localhost
+      port: 9091
+      username: transmission
+      password: transmission
+      ratio: 1
+      skip_files:
+        - '*.nfo'
+        - '*.sfv'
+        - '*[sS]ample*'
+        - '*.txt'
+    pushbullet:
+      apikey: ySEoI9cVsROmXdFyqpLoRexeJPf5NdEK
+      #device: <DEVICE_IDEN>
+      title: "{{task}}"
+      #[body: <MESSAGE_BODY>] (default: "{{series_name}} {{series_id}}" -- accepts Jinja2)
+
+    set:
+      path: /media/TOSHIBA/HTPC/Serie TV/{{series_name|pathscrub}}/S{{"%02d"|format(series_season)}}
+      main_file_only: yes
+      content_filename: "{{ series_name|replace(' ','.') }}.{{ series_id }}"
+  sorttv:
+    series:
+      hdtv <720p:
+        - Silicon Valley
+        - Game of Thrones
+        - The Big Bang Theory
+        - The Royals
+tasks:
+  showrss:
+    priority: 1
+    rss: http://showrss.info/rss.php?user_id=165323&hd=null&proper=null&magnets=false&raw=true
+    template: tv
+    all_series: yes
+#  myitasa:
+#    rss: http://www.italiansubs.net/index.php?option=com_rsssub&type=favsub&id=170646&hash=34b11412de66057f1fbc402cbeede46a
+#    accept_all: yes
+#    itasa:
+#      username: kreker
+#      password: kr3k3r
+#      path: '/tmp'
+  seed_series_db:
+    find:
+      regexp: .*(avi|mkv|mp4)$
+      path: '/media/TOSHIBA/HTPC/Serie TV'
+      recursive: yes
+    template: tv
+    # We use the manual plugin so that this task only runs when explicitly called
+    manual: yes
+  sort-series:
+    no_entries_ok: yes
+    find:
+      path:
+        - /media/TOSHIBA/HTPC/torrent/download
+      regexp: '.*\.(avi|mkv|mp4)$'
+      recursive: yes
+    #seen: local
+    disable:
+      - seen
+      - retry_failed
+    template: sorttv
+    # NOTE: You must set the parse_only option for all of the series groups you have configured in your template.
+    # This option prevents the series plugin from accepting or rejecting anything in this feed.
+    series:
+      settings:
+        hdtv <720p:
+          parse_only: yes
+    # Ignore samples
+    regexp:
+      reject:
+        - sample
+    # With the require_field and accept_all plugins, we accept anything that the series plugin has successfully parsed.
+    require_field: series_name
+    accept_all: yes
+    move:
+      to: '/media/TOSHIBA/HTPC/Serie TV/{{series_name}}/S{{series_season|pad(2)}}'
+      filename: "{{ series_name|replace(' ','.') }}.{{ series_id }}{{ location|pathext }}"
+
+  clean-queue:
+    clean_transmission:
+      host: localhost
+      port: 9091
+      username: transmission
+      password: transmission
+      finished_for: 1 hour
+      min_ratio: 0
